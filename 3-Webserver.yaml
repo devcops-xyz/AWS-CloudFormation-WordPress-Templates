@@ -3,11 +3,9 @@ Parameters:
     Description: SSM Parameter that contains the AMI ID of the latest Amazon Linux version.
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
-
   InstanceKey:
     Type: AWS::EC2::KeyPair::KeyName
     Default: Azubi-Khaled
-
   InstanceType:
     Description: WebServer EC2 instance type
     Type: String
@@ -66,7 +64,6 @@ Parameters:
       - cr1.8xlarge
       - cc2.8xlarge
     ConstraintDescription: must be a valid EC2 instance type.
-
   WebServerCapacity:
     Default: '1'
     Description: The initial number of WebServer instances
@@ -75,12 +72,26 @@ Parameters:
     MaxValue: '3'
     ConstraintDescription: must be between 1 and 3 EC2 instances.
 Resources:
+  LBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !ImportValue VpcID
+      GroupDescription: Enable SSH & HTTP
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
 
   ApplicationLoadBalancer:
     Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     Properties:
       SecurityGroups:
-        - !ImportValue WebServerSecurityGroup
+        - !Ref LBSecurityGroup
       Subnets: 
         - !ImportValue PublicSubnetA
         - !ImportValue PublicSubnetB
@@ -108,11 +119,26 @@ Resources:
       UnhealthyThresholdCount: 5
       VpcId: !ImportValue VpcID
 
+  ASGSecurityGroup:
+      Type: 'AWS::EC2::SecurityGroup'
+      Properties:
+        GroupDescription: SecGrp for ASG
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            SourceSecurityGroupId: !Ref LBSecurityGroup
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            SourceSecurityGroupId: !Ref LBSecurityGroup
+        VpcId: !ImportValue VpcID
+
   WebServerGroup:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
       VPCZoneIdentifier:
-        - !ImportValue PublicSubnetA
+        - !ImportValue PrivateSubnetA
       LaunchConfigurationName: !Ref LaunchConfig
       MinSize: '1'
       MaxSize: '5'
@@ -128,7 +154,6 @@ Resources:
         MaxBatchSize: 1
         PauseTime: PT15M
         WaitOnResourceSignals: true
-
   LaunchConfig:
     Type: 'AWS::AutoScaling::LaunchConfiguration'
     Metadata:
@@ -229,7 +254,8 @@ Resources:
       ImageId: !Ref DynamicAmi
       InstanceType: !Ref InstanceType
       SecurityGroups:
-        - !ImportValue WebServerSecurityGroup
+        - !Ref ASGSecurityGroup
+        - !ImportValue DBAccessSecurityGroup
       IamInstanceProfile:
         Ref: InstanceProfile
       KeyName: !Ref InstanceKey
@@ -279,8 +305,7 @@ Resources:
               -
                 Effect: "Allow"
                 Action: "secretsmanager:GetSecretValue"
-                Resource: "*"
-
+                Resource: !ImportValue RDSSecret
   InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:

@@ -35,7 +35,6 @@ Parameters:
       - db.t2.medium
       - db.t2.large
     ConstraintDescription: must select a valid database instance type.
-
   DBName:
     Default: wordpressdb
     Description: The WordPress database name
@@ -44,7 +43,6 @@ Parameters:
     MaxLength: '64'
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
-
   MultiAZDatabase:
     Default: 'false'
     Description: Create a Multi-AZ MySQL Amazon RDS database instance
@@ -53,7 +51,6 @@ Parameters:
       - 'true'
       - 'false'
     ConstraintDescription: must be either true or false.
-
   DBAllocatedStorage:
     Default: '5'
     Description: The size of the database (Gb)
@@ -63,32 +60,21 @@ Parameters:
     ConstraintDescription: must be between 5 and 1024Gb.
 
 Resources:
-  WebServerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      VpcId: !ImportValue VpcID
-      GroupDescription: Enable SSH
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: 0.0.0.0/0
-
-  DBEC2SecurityGroup:
+  DBAccessSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Open database for access
+      VpcId: !ImportValue VpcID
+  DBEC2SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: SecGrp for database
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 3306
           ToPort: 3306
-          SourceSecurityGroupId: !Ref WebServerSecurityGroup
+          SourceSecurityGroupId: !Ref DBAccessSecurityGroup
       VpcId: !ImportValue VpcID
-
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties: 
@@ -142,7 +128,7 @@ Outputs:
       Value: !Ref MyRDSSecret
       Export:
         Name: RDSSecret
-    WebServerSG:
-      Value: !Ref WebServerSecurityGroup
+    DBAccessSG:
+      Value: !Ref DBAccessSecurityGroup
       Export:
-        Name: WebServerSecurityGroup
+        Name: DBAccessSecurityGroup
