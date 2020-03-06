@@ -76,15 +76,11 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !ImportValue VpcID
-      GroupDescription: Enable SSH & HTTP
+      GroupDescription: Enable HTTP
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
           CidrIp: 0.0.0.0/0
 
   ApplicationLoadBalancer:
@@ -127,10 +123,6 @@ Resources:
           - IpProtocol: tcp
             FromPort: 80
             ToPort: 80
-            SourceSecurityGroupId: !Ref LBSecurityGroup
-          - IpProtocol: tcp
-            FromPort: 22
-            ToPort: 22
             SourceSecurityGroupId: !Ref LBSecurityGroup
         VpcId: !ImportValue VpcID
 
