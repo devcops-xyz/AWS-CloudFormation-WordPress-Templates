@@ -5,7 +5,7 @@ Parameters:
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
   InstanceKey:
     Type: AWS::EC2::KeyPair::KeyName
-    Default: Azubi-Khaled
+    Description: Provides the name of the EC2 key pair.
   InstanceType:
     Description: WebServer EC2 instance type
     Type: String
